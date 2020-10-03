@@ -63,9 +63,7 @@ async function handleMessage(msg) {
   ) {
     //Give them the notified warning.
     msg.reply(
-      'By continuing to use this bot, you agree to release the creator, owners, all maintainers of the bot, and the ' +
-        process.settings.coin.symbol +
-        ' Team from any legal liability.\r\n\r\nPlease run your previous command again.'
+      'By continuing to use this bot, you agree to release the creator, owners, all maintainers of the bot, and the Keep Team from any legal liability.\r\n\r\nPlease run your previous command again.'
     );
     //Mark them as notified.
     await process.core.users.setNotified(sender);

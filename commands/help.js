@@ -6,9 +6,14 @@ var fee = process.settings.coin.withdrawFee;
 
 //Default help tect.
 var help = `
+**It is running on Rinkeby Testnet right now!! Do not deposit real tBTC into it**
+**Using Rinkeby DAI as a dummy token. You can find faucet from Compound interface**
+
 **Keep Discord TIPBOT COMMAND LIST**
 
-To run a command, either preface it with "!" ("!deposit", "!tip") or ping the bot ("<@${bot}> deposit", "<@${bot}> tip").
+This bot allows you to tip and make payment to any Discord user with tBTC on Ethereum mainnet
+
+To run a command, either preface it with "$" ("$deposit", "$tip").
 
 This bot does use decimals, and has ${decimals} decimals of accuracy. You can also use "all" instead of any AMOUNT to tip/withdraw your entire balance.
 
