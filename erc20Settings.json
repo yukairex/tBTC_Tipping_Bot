@@ -11,7 +11,7 @@
     "decimals": 18,
     "withdrawFee": 1,
     "infura": "wss://mainnet.infura.io/ws/v3/ID",
-    "keys": "/home/tipbot/.ethereum/keystore/",
+    "keys": "./.ethereum/keystore/",
     "addresses": {
       "wallet": "0x0000000000000000000000000000000000000000",
       "contract": "0x0000000000000000000000000000000000000000"
