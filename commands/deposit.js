@@ -1,13 +1,17 @@
 module.exports = async (msg) => {
+  if (msg.obj.channel.type !== 'dm') {
+    msg.obj.reply('check your DM!');
+  }
+
   if (!(await process.core.users.getAddress(msg.sender))) {
-    msg.obj.reply('Generating your deposit address! Hold on'); // generate deposit address
+    msg.obj.author.send('Generating your deposit address!'); // generate deposit address
     await process.core.users.setAddress(
       msg.sender,
       await process.core.coin.createAddress(msg.sender)
     );
   }
 
-  msg.obj.reply(
+  msg.obj.author.send(
     'Your reusable address is ' +
       (await process.core.users.getAddress(msg.sender))
   );

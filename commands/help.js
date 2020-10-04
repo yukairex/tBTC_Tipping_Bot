@@ -6,8 +6,9 @@ var fee = process.settings.coin.withdrawFee;
 
 //Default help tect.
 var help = `
-**It is running on Rinkeby Testnet right now!! Do not deposit real tBTC into it**
-**Using Rinkeby DAI as a dummy token. You can find faucet from Compound interface**
+** Warning **
+It is running on Rinkeby Testnet right now!! Do not deposit real tBTC into it
+Using Rinkeby DAI as a dummy token. You can find faucet from Compound App
 
 **Keep Discord TIPBOT COMMAND LIST**
 
@@ -20,21 +21,43 @@ This bot does use decimals, and has ${decimals} decimals of accuracy. You can al
 -- *$balance*
 Prints your balance.
 
--- *$tip <@PERSON> <AMOUNT>*
-Tips the person that amount of ${symbol}.
+-- *$tip <@PERSON>*
+Tips the person $5.
 
--- *$withdraw <AMOUNT> <ADDRESS>*
-Withdraws AMOUNT to ADDRESS, charging a ${fee} ${symbol} fee.
+-- *$tip <@PERSON> $<AMOUNT>*
+Tips the person amount of **dollar**.
+
+-- *$tip <@PERSON> <AMOUNT>*
+Tips the person that amount of **${symbol}**.
+
+-- *$tip <@PERSON> all*
+Tips all your balance to this person.
+
+-- *$withdraw <AMOUNT of tBTC> <ADDRESS>*
+Withdraws AMOUNT of tBTC to ADDRESS, charging a **${fee}** ${symbol} fee. Message in DM
+
+-- *$withdraw all <ADDRESS>*
+Withdraws all your tBTC to ADDRESS, charging a **${fee}** ${symbol} fee. Message in DM
 
 -- *$deposit*
-Prints your personal deposit address.
+Prints your personal deposit address in DM.
 
+Contact @Crypto Investor #3523 if any question
 `;
 
+// reply help in the current channel
 module.exports = async (msg) => {
-  msg.obj.author.send({
+  msg.obj.reply({
     embed: {
       description: help,
     },
   });
 };
+
+// module.exports = async (msg) => {
+//   msg.obj.author.send({
+//     embed: {
+//       description: help,
+//     },
+//   });
+// };

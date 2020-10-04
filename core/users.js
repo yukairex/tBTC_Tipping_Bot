@@ -45,13 +45,13 @@ async function create(user) {
     user,
     '',
     '0',
-    1,
+    0,
   ]);
   //Create the new user in the RAM cache, with a status of no address, balance of 0, and the notify flag on.
   users[user] = {
     address: false,
     balance: BN(0),
-    notify: true,
+    notify: false, // get rid of notify flag
   };
 
   //Return true on success.

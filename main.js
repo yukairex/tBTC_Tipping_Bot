@@ -33,12 +33,12 @@ async function handleMessage(msg) {
     return item !== '';
   });
 
-  //If the start of the message, is a ping to the bot, swap it for !.
-  if (text[0] === process.client.user.toString()) {
-    text[1] = '$' + text[1];
-    //Also remove the ping.
-    text.splice(0, 1);
-  }
+  // //If the start of the message, is a ping to the bot, swap it for !.
+  // if (text[0] === process.client.user.toString()) {
+  //   text[1] = '$' + text[1];
+  //   //Also remove the ping.
+  //   text.splice(0, 1);
+  // }
 
   //Filter the message.
   text = text
@@ -54,21 +54,8 @@ async function handleMessage(msg) {
     return;
   }
 
-  if (
-    //Create an user if they don't have an account already.
-    //If they didn't have an account, and create returned true...
-    (await process.core.users.create(sender)) ||
-    //Or if they need to be notified...
-    (await process.core.users.getNotify(sender))
-  ) {
-    //Give them the notified warning.
-    msg.reply(
-      'By continuing to use this bot, you agree to release the creator, owners, all maintainers of the bot, and the Keep Team from any legal liability.\r\n\r\nPlease run your previous command again.'
-    );
-    //Mark them as notified.
-    await process.core.users.setNotified(sender);
-    return;
-  }
+  //Create an user if they don't have an account already.
+  await process.core.users.create(sender);
 
   //Remove the activation symbol.
   text[0] = text[0].substring(1, text[0].length);
@@ -96,6 +83,7 @@ async function handleMessage(msg) {
 }
 
 async function main() {
+  console.log('bot starting...');
   //Load the settings into a global var so every file has access.
   process.settings = require('./settings.json');
   //Load it's path separately so we can write to it without writing the path.
@@ -132,6 +120,7 @@ async function main() {
 
   //Connect.
   process.client.login(process.settings.discord.token);
+  console.log('ready to serve....');
 }
 
 (async () => {
