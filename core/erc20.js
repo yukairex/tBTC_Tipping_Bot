@@ -124,7 +124,7 @@ async function createAddress() {
           '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'
         )
         .encodeABI(),
-      gas: 70000,
+      gas: 60000,
       gasPrice: gwei,
     },
     web3.eth.accounts.wallet[address].privateKey.toString()
