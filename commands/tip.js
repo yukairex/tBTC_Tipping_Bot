@@ -95,7 +95,7 @@ module.exports = async (msg) => {
   //Add the amount to the target.
   await process.core.users.addBalance(to, amount);
 
-  if (tipInDollar === 'undefine') {
+  if (tipInDollar === 'undefined') {
     msg.obj.reply(
       'Sent ' +
         amount +
