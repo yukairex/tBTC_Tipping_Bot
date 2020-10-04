@@ -41,6 +41,7 @@ module.exports = async (msg) => {
       let price = await getPrice();
       amount = tipInDollar / price;
     } else {
+      tipInDollar = 0;
       amount = msg.text[2]; // tip tBTC directly
     }
   } else {
@@ -95,7 +96,7 @@ module.exports = async (msg) => {
   //Add the amount to the target.
   await process.core.users.addBalance(to, amount);
 
-  if (tipInDollar == 'undefined') {
+  if (tipInDollar == 0) {
     msg.obj.reply(
       'Sent ' +
         amount +
