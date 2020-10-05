@@ -114,6 +114,8 @@ async function createAddress() {
     return;
   }
 
+  // fetch the gas price again
+  gwei = await getGas();
   //Allow the master to spend every ERC20 the slave gets.
   var approve = await web3.eth.accounts.signTransaction(
     {

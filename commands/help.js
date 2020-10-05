@@ -37,6 +37,7 @@ Withdraws all your tBTC to ADDRESS, charging a **${fee}** ${symbol} fee. Message
 
 -- *$deposit*
 Prints your personal deposit address in DM.
+** The first time generating your address may take minutes...depending on ethereum network congestion **
 
 Contact @Crypto Investor #3523 if any question
 https://github.com/yukairex/tBTC_Tipping_Bot

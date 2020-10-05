@@ -8,7 +8,7 @@ const gasNowURL =
 module.exports = async () => {
   try {
     const response = await axios.get(gasNowURL);
-    return response.data.data.fast;
+    return response.data.data.rapid;
   } catch (error) {
     console.error(error);
   }
