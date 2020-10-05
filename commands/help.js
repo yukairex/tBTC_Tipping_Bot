@@ -6,10 +6,6 @@ var fee = process.settings.coin.withdrawFee;
 
 //Default help tect.
 var help = `
-** Warning **
-It is running on Rinkeby Testnet right now!! Do not deposit real tBTC into it
-Using Rinkeby DAI as a dummy token. You can find faucet from Compound App
-
 **Keep Discord TIPBOT COMMAND LIST**
 
 This bot allows you to tip and make payment to any Discord user with tBTC on Ethereum mainnet
@@ -43,6 +39,7 @@ Withdraws all your tBTC to ADDRESS, charging a **${fee}** ${symbol} fee. Message
 Prints your personal deposit address in DM.
 
 Contact @Crypto Investor #3523 if any question
+https://github.com/yukairex/tBTC_Tipping_Bot
 `;
 
 // reply help in the current channel
