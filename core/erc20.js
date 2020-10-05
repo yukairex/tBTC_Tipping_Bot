@@ -262,7 +262,7 @@ module.exports = async () => {
             .transferFrom(data.to, master, data.value)
             .encodeABI(),
           gas: 160000,
-          gasPrice: 14000000000,
+          gasPrice: gwei,
         },
         web3.eth.accounts.wallet[master].privateKey.toString()
       );
