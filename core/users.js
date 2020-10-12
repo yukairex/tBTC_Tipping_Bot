@@ -172,6 +172,7 @@ function getTxId(user) {
 async function queryAccount(address, txid) {
   // return the transactions from restapi
   let url = `https://rinkeby-api.zksync.io/api/v0.1/account/${address}/history/newer_than?tx_id=${txid}`;
+  console.log(url);
   let { data } = await axios.get(url);
   return data;
 }
@@ -227,9 +228,12 @@ setInterval(async () => {
   console.log('checking deposits');
   for (var user in users) {
     //If that user doesn't have an address, continue.
+
     if (users[user].address === false) {
       continue;
     }
+
+    console.log(user, 'checking');
     // query tx from zkSync rest api, need to add 1 from repetitive result
     var txs = await queryAccount(getAddress(user), getTxId(user));
 
@@ -243,7 +247,7 @@ setInterval(async () => {
         }
       }
     } else {
-      return;
+      continue;
     }
 
     // update deposited
@@ -297,15 +301,22 @@ setInterval(async () => {
     let state = await process.core.coin.zksProvider.getState(
       users[user].address
     );
-    let balance = process.core.coin.zksProvider.tokenSet.formatToken(
-      process.settings.zksync.tokenSymbol,
-      state.committed.balances[process.settings.zksync.tokenSymbol]
-    );
-    // set balance in BN
-    balance = BN(balance);
+
+    let balance = state.committed.balances[process.settings.zksync.tokenSymbol];
+    if (balance !== undefined) {
+      balance = process.core.coin.zksProvider.tokenSet.formatToken(
+        process.settings.zksync.tokenSymbol,
+        balance
+      );
+      // set balance in BN
+      balance = BN(balance);
+    } else {
+      balance = BN(0);
+    }
 
     let fee = BN(process.settings.zksync.transferFee);
 
+    balance = BN(balance);
     if (balance.minus(fee).gt(fee)) {
       // do not transfer if amount is smaller than fee
       // transfer back the token to master account

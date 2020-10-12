@@ -1,8 +1,4 @@
 module.exports = async (msg) => {
-  if (msg.obj.channel.type !== 'dm') {
-    msg.obj.reply('check your DM!');
-  }
-
   if (!(await process.core.users.getAddress(msg.sender))) {
     msg.obj.author.send(
       'Generating your deposit address! This might take quite a while...need to setup on chain'
