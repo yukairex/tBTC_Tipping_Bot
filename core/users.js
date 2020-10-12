@@ -1,10 +1,15 @@
 //MySQL and BN libs.
 var mysql = require('promise-mysql');
 var BN = require('bignumber.js');
+var axios = require('axios');
 BN.config({
   ROUNDING_MODE: BN.ROUND_DOWN,
   EXPONENTIAL_AT: process.settings.coin.decimals + 1,
 });
+
+// load zkSync and ether.js
+const zksync = require('zksync');
+const ethers = require('ethers');
 
 //Definition of the table: `name VARCHAR(64), address VARCHAR(64), balance VARCHAR(64), notify tinyint(1)`.
 
@@ -12,10 +17,7 @@ BN.config({
 var connection, table;
 
 //RAM cache of users.
-var users;
-
-//Array of every handled TX hash.
-var handled;
+var users = [];
 
 //Checks an amount for validity.
 async function checkAmount(amount) {
@@ -41,17 +43,21 @@ async function create(user) {
   }
 
   //Create the new user, with a blank address, balance of 0, and the notify flag on.
-  await connection.query('INSERT INTO ' + table + ' VALUES(?, ?, ?, ?)', [
+  await connection.query('INSERT INTO ' + table + ' VALUES(?,?, ?, ?, ?,?)', [
+    Object.keys(users).length + 1,
     user,
     '',
     '0',
     0,
+    '0,0',
   ]);
-  //Create the new user in the RAM cache, with a status of no address, balance of 0, and the notify flag on.
+  //Create the new user in the RAM cache, with a status of no address, balance of 0, and the notify flag off.
   users[user] = {
+    id: Object.keys(users).length + 1,
     address: false,
     balance: BN(0),
     notify: false, // get rid of notify flag
+    txid: '0,0',
   };
 
   //Return true on success.
@@ -60,7 +66,7 @@ async function create(user) {
 
 //Sets an user's address.
 async function setAddress(user, address) {
-  //If they already have an addrwss, return.
+  //If they already have an address, return.
   if (typeof users[user].address === 'string') {
     return;
   }
@@ -77,19 +83,24 @@ async function setAddress(user, address) {
 //Adds to an user's balance.
 async function addBalance(user, amount) {
   //Return false if the amount is invalid.
+  amount = BN(amount);
+
   if (!(await checkAmount(amount))) {
     return false;
   }
 
   //Add the amount to the balance.
   var balance = users[user].balance.plus(amount);
+
   //Convert the balance to the coin's smallest unit.
   balance = balance.toFixed(process.settings.coin.decimals);
+
   //Update the table with the new balance, as a string.
   await connection.query(
     'UPDATE ' + table + ' SET balance = ? WHERE name = ?',
     [balance, user]
   );
+
   //Update the RAM cache with a BN.
   users[user].balance = BN(balance);
 
@@ -112,6 +123,7 @@ async function subtractBalance(user, amount) {
 
   //Convert the balance to the coin's smallest unit.
   balance = balance.toFixed(process.settings.coin.decimals);
+
   //Update the table with the new balance, as a string.
   await connection.query(
     'UPDATE ' + table + ' SET balance = ? WHERE name = ?',
@@ -123,30 +135,45 @@ async function subtractBalance(user, amount) {
   return true;
 }
 
-//Updates the notify flag.
-async function setNotified(user) {
-  //Update the table with a turned off notify flag.
-  await connection.query('UPDATE ' + table + ' SET notify = ? WHERE name = ?', [
-    0,
+async function updateUserTxId(user, txid) {
+  // check if the tx id is valid or not
+  let result = txid.split(',');
+  if (result.length == 1) {
+    // fix the api issue
+    txid = txid + ',0';
+  }
+
+  await connection.query('UPDATE ' + table + ' SET txid = ? WHERE name = ?', [
+    txid,
     user,
   ]);
-  //Update the RAM cache.
-  users[user].notify = false;
+  users[user].txid = txid;
 }
 
 //Returns an user's address.
-async function getAddress(user) {
+function getAddress(user) {
   return users[user].address;
 }
 
 //Returns an user's balance
-async function getBalance(user) {
+function getBalance(user) {
   return users[user].balance;
 }
 
-//Returns an user's notify flag.
-async function getNotify(user) {
-  return users[user].notify;
+function getUserId(user) {
+  return users[user].id;
+}
+
+function getTxId(user) {
+  return users[user].txid;
+}
+
+// listen for transaction happened on L2
+async function queryAccount(address, txid) {
+  // return the transactions from restapi
+  let url = `https://rinkeby-api.zksync.io/api/v0.1/account/${address}/history/newer_than?tx_id=${txid}`;
+  let { data } = await axios.get(url);
+  return data;
 }
 
 module.exports = async () => {
@@ -170,6 +197,7 @@ module.exports = async () => {
   var i;
   for (i in rows) {
     users[rows[i].name] = {
+      id: rows[i].id,
       //If the address is an empty string, set the value to false.
       //This is because we test if the address is a string to see if it's already set.
       address: rows[i].address !== '' ? rows[i].address : false,
@@ -177,64 +205,117 @@ module.exports = async () => {
       balance: BN(rows[i].balance),
       //Set the notify flag based on if the DB has a value of 0 or 1 (> 0 for safety).
       notify: rows[i].notify > 0,
+      // set the txid of user for REST API referesh
+      txid: rows[i].txid,
     };
-
-    //Get this user's existing TXs.
-    var txs = await process.core.coin.getTransactions(
-      users[rows[i].name].address
-    );
-    //Iterate over each, and push their hashes so we don't process them again.
-    var x;
-    for (x in txs) {
-      handled.push(txs[x].txid);
-    }
-  }
-
-  //Make sure all the pools have accounts.
-  for (i in process.settings.pools) {
-    //Create an account for each. If they don't have one, this will do nothing.
-    await create(i);
   }
 
   //Return all the functions.
   return {
     create: create,
-
     setAddress: setAddress,
     addBalance: addBalance,
     subtractBalance: subtractBalance,
-    setNotified: setNotified,
-
     getAddress: getAddress,
     getBalance: getBalance,
-    getNotify: getNotify,
+    getUserId: getUserId,
   };
 };
 
-//Every thirty seconds, check the TXs of each user.
+//Every thirty seconds, check the TXs of users
 setInterval(async () => {
+  console.log('checking deposits');
   for (var user in users) {
     //If that user doesn't have an address, continue.
     if (users[user].address === false) {
       continue;
     }
+    // query tx from zkSync rest api, need to add 1 from repetitive result
+    var txs = await queryAccount(getAddress(user), getTxId(user));
 
-    //Declare the amount deposited.
-    var deposited = BN(0);
-    //Get the TXs.
-    var txs = await process.core.coin.getTransactions(users[user].address);
+    // total deposit of this account from last check
+    if (txs.length > 0) {
+      for (var tx of txs) {
+        // update user txid to the first one that is committed
+        if (tx.commited == true) {
+          await updateUserTxId(user, tx.tx_id);
+          break;
+        }
+      }
+    } else {
+      return;
+    }
+
+    // update deposited
+    var deposited = new BN(0);
 
     //Iterate over the TXs.
-    for (var i in txs) {
-      //If we haven't handled them...
-      if (handled.indexOf(txs[i].txid) === -1) {
-        //Add the TX value to the deposited amount.
-        deposited = deposited.plus(BN(txs[i].amount));
-        //Push the TX ID so we don't handle it again.
-        handled.push(txs[i].txid);
+    for (var tx of txs) {
+      // calculate total amount from L1 deposit
+      if (tx.tx.type == 'Deposit' && tx.commited === true) {
+        if (tx.tx.priority_op.token == process.settings.zksync.tokenSymbol) {
+          let amount = process.core.coin.zksProvider.tokenSet.formatToken(
+            process.settings.zksync.tokenSymbol,
+            tx.tx.priority_op.amount
+          );
+          deposited = deposited.plus(BN(amount));
+        }
+      }
+
+      // calculate total amount from L2 transfer
+      if (tx.tx.type == 'Transfer' && tx.commited === true) {
+        if (
+          tx.tx.to.toLowerCase() == getAddress(user).toLowerCase() &&
+          tx.tx.token == process.settings.zksync.tokenSymbol
+        ) {
+          let amount = process.core.coin.zksProvider.tokenSet.formatToken(
+            process.settings.zksync.tokenSymbol,
+            tx.tx.amount
+          );
+          deposited = deposited.plus(BN(amount));
+        }
       }
     }
 
+    deposited = deposited.toFixed(process.settings.coin.decimals);
+
+    //update balance
+    console.log('updating user', user, 'total deposit', deposited);
     await addBalance(user, deposited);
   }
-}, 30 * 1000);
+}, 10 * 1000);
+
+// set interval for balance looping back
+
+setInterval(async () => {
+  for (var user in users) {
+    if (users[user].address === false) {
+      continue;
+    }
+
+    // loop back balance
+    let state = await process.core.coin.zksProvider.getState(
+      users[user].address
+    );
+    let balance = process.core.coin.zksProvider.tokenSet.formatToken(
+      process.settings.zksync.tokenSymbol,
+      state.committed.balances[process.settings.zksync.tokenSymbol]
+    );
+    // set balance in BN
+    balance = BN(balance);
+
+    let fee = BN(process.settings.zksync.transferFee);
+
+    if (balance.minus(fee).gt(fee)) {
+      // do not transfer if amount is smaller than fee
+      // transfer back the token to master account
+      let amount = balance.minus(fee).minus(fee);
+      await process.core.coin.sendTo(
+        users[user].id,
+        process.core.coin.zkSyncMaster.address(), // send to master address
+        amount,
+        fee
+      );
+    }
+  }
+}, 10 * 1000);

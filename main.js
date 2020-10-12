@@ -85,19 +85,27 @@ async function handleMessage(msg) {
 async function main() {
   console.log('bot starting...');
   //Load the settings into a global var so every file has access.
+  console.log('load settings...');
   process.settings = require('./settings.json');
   //Load it's path separately so we can write to it without writing the path.
+  console.log('load settings directory...');
   process.settingsPath = path.join(__dirname, 'settings.json');
 
+  console.log('initialize core...');
   //Set the core libs to a global object, so they're accessible by commands.
   process.core = {};
+
+  console.log('initialize coin...'); // this one takes quite a while!
   //Require and init the coin lib, set by the settings.
   process.core.coin = await require('./core/' +
     process.settings.coin.type.toLowerCase() +
     '.js')();
+
+  console.log('initialize users...');
   //Require and init the users lib.
   process.core.users = await require('./core/users.js')();
 
+  console.log('loading discord commands...');
   //Declare the commands and load them.
   commands = {
     help: require('./commands/help.js'),
@@ -105,10 +113,11 @@ async function main() {
     balance: require('./commands/balance.js'),
     tip: require('./commands/tip.js'),
     withdraw: require('./commands/withdraw.js'),
-    pool: require('./commands/pool.js'),
+    //pool: require('./commands/pool.js'),
     //giveaway: require("./commands/giveaway.js")
   };
 
+  console.log('initialize discord client...');
   //Create a Discord process.client.
   process.client = new (require('discord.js').Client)();
 

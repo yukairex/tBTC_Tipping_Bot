@@ -15,139 +15,57 @@ var getGas = require('../api/gas');
 
 //Web3 lib.
 var web3 = require('web3');
-//ERC20 ABI.
-var abi = [
-  {
-    constant: false,
-    inputs: [
-      { name: '_spender', type: 'address' },
-      { name: '_value', type: 'uint256' },
-    ],
-    name: 'approve',
-    outputs: [{ name: 'success', type: 'bool' }],
-    type: 'function',
-  },
-  {
-    constant: false,
-    inputs: [
-      { name: '_from', type: 'address' },
-      { name: '_to', type: 'address' },
-      { name: '_value', type: 'uint256' },
-    ],
-    name: 'transferFrom',
-    outputs: [{ name: 'success', type: 'bool' }],
-    type: 'function',
-  },
-  {
-    constant: false,
-    inputs: [
-      { name: '_to', type: 'address' },
-      { name: '_value', type: 'uint256' },
-    ],
-    name: 'transfer',
-    outputs: [{ name: 'success', type: 'bool' }],
-    type: 'function',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      { indexed: true, name: 'from', type: 'address' },
-      { indexed: true, name: 'to', type: 'address' },
-      { indexed: false, name: 'value', type: 'uint256' },
-    ],
-    name: 'Transfer',
-    type: 'event',
-  },
-];
-//Contract.
-var contract;
+
+// load zkSync and ether.js
+const zksync = require('zksync');
+const ethers = require('ethers');
 
 //Decimals in the ERC20.
 var decimals;
 var decimalsBN;
 
-//Master address.
-var master;
+//Master address wallet on mainnet and zkSync.
+var master, zkSyncMaster;
+
+// ethereum network and zkSyncprovider
+var provider, zksProvider; // make it global
+
 //RAM cache of the addresses and TXs.
-var addresses, txs;
+var addresses = [];
+var txs = {};
 
-async function createAddress() {
+//Checks an amount for validity.
+async function checkAmount(amount) {
+  //If the amount is invalid...
+  amount = BN(amount);
+  if (amount.isNaN()) {
+    return false;
+  }
+
+  //If the amount is less than or equal to 0...
+  if (amount.lte(0)) {
+    return false;
+  }
+
+  //Else, return true.
+  return true;
+}
+
+// create an address by user Id, return the address
+async function createAddress(user) {
+  // fetch id
+  let id = await process.core.users.getUserId(user);
   //Create a new Wallet.
-  var newWallet = ethjsWallet.generate();
-  var address = newWallet.getChecksumAddressString().toString().toLowerCase();
-  web3.eth.accounts.wallet.add(
-    '0x' + newWallet.getPrivateKey().toString('hex')
-  );
+  var newWallet = new ethers.Wallet.fromMnemonic(
+    process.settings.zksync.mnemonic,
+    process.settings.zksync.pathPrefix + id
+  ).connect(provider);
+
+  var address = newWallet.address;
+
+  // push address into addresses
   addresses.push(address);
 
-  //Save it to the disk.
-  fs.writeFileSync(
-    process.settings.coin.keys + address + '.json',
-    JSON.stringify(newWallet.toV3(''), null, 4)
-  );
-
-  let gwei = await getGas();
-
-  //Send the new slave Ether.
-  var fund = await web3.eth.accounts.signTransaction(
-    {
-      to: address,
-      gas: 21000,
-      gasPrice: gwei,
-      value: gwei * 70000, // the amount of ether to approve transaction web3.utils.toWei('0.001'),
-    },
-    web3.eth.accounts.wallet[master].privateKey.toString()
-  );
-  web3.eth.sendSignedTransaction(fund.rawTransaction);
-
-  var receipt;
-  do {
-    await sleep(5000);
-    receipt = await web3.eth.getTransactionReceipt(
-      web3.utils.sha3(fund.rawTransaction)
-    );
-  } while (receipt == null);
-
-  if (!receipt.status) {
-    /*eslint no-console: ["error", {allow: ["error"]}]*/
-    console.error("Couldn't send the new address its initial funds.");
-    return;
-  }
-
-  // fetch the gas price again
-  gwei = await getGas();
-  //Allow the master to spend every ERC20 the slave gets.
-  var approve = await web3.eth.accounts.signTransaction(
-    {
-      to: process.settings.coin.addresses.contract,
-      data: await contract.methods
-        .approve(
-          master,
-          '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'
-        )
-        .encodeABI(),
-      gas: 60000,
-      gasPrice: gwei,
-    },
-    web3.eth.accounts.wallet[address].privateKey.toString()
-  );
-  web3.eth.sendSignedTransaction(approve.rawTransaction);
-
-  do {
-    await sleep(5000);
-    receipt = await web3.eth.getTransactionReceipt(
-      web3.utils.sha3(approve.rawTransaction)
-    );
-  } while (receipt == null);
-
-  if (!receipt.status) {
-    /*eslint no-console: ["error", {allow: ["error"]}]*/
-    console.error("Couldn't call approve from the new address.");
-    return;
-  }
-
-  //Add the new address to the list of addresses.
-  addresses.push(address);
   //Return it.
   return address;
 }
@@ -160,156 +78,129 @@ async function getTransactions(address) {
   return txs[address];
 }
 
-async function send(to, amount) {
-  //Add on the needed decimals.
-  amount = amount.toFixed(decimals).replace('.', '');
+async function getSyncWallet(senderId) {
+  // load the wallet
+  let wallet = new ethers.Wallet.fromMnemonic(
+    process.settings.zksync.mnemonic,
+    process.settings.zksync.pathPrefix + senderId
+  ).connect(provider);
 
-  // gwei price
-  let gwei = await getGas();
-
-  //Transfer the ERC20.
-  var transfer = await web3.eth.accounts.signTransaction(
-    {
-      to: process.settings.coin.addresses.contract,
-      data: await contract.methods.transfer(to, amount).encodeABI(),
-      gas: 160000,
-      gasPrice: gwei,
-    },
-    web3.eth.accounts.wallet[master].privateKey.toString()
+  let syncWallet = await zksync.Wallet.fromEthSigner(
+    wallet,
+    process.core.coin.zksProvider
   );
-  web3.eth.sendSignedTransaction(transfer.rawTransaction);
+  return syncWallet;
+}
 
-  var receipt;
-  do {
-    await sleep(5000);
-    receipt = await web3.eth.getTransactionReceipt(
-      web3.utils.sha3(transfer.rawTransaction)
-    );
-  } while (receipt == null);
+async function sendTo(senderId, toAddress, amount, fee) {
+  // send from fromWallet to master account amount of token
 
-  if (receipt.status) {
-    return web3.utils.sha3(transfer.rawTransaction);
+  // senderId is an integer number to derive the private key
+  // toAddress is an 0x address
+  // amount and fee are BN
+  if (!checkAmount(amount)) return false;
+  if (!checkAmount(fee)) return false;
+
+  // check if amount is smaller than fee, do not transfer
+  if (amount.lt(fee)) {
+    return false;
   }
-  return false;
+
+  let fromWallet = await getSyncWallet(senderId);
+  console.log('sender wallet:', fromWallet.address());
+  let balance = zksProvider.tokenSet.formatToken(
+    process.settings.zksync.tokenSymbol,
+    await fromWallet.getBalance(process.settings.zksync.tokenSymbol)
+  );
+
+  balance = BN(balance);
+
+  console.log(balance.toString());
+  console.log(amount.toString());
+  console.log(fee.toString());
+
+  if (balance.lt(amount.plus(fee))) {
+    console.log('insufficient balance');
+    return;
+  }
+
+  if (!(await fromWallet.isSigningKeySet())) {
+    console.log('setting signing key...');
+    // checking if public key has been assigned
+    if ((await fromWallet.getAccountId()) == undefined) {
+      throw new Error('Unknwon account');
+    }
+
+    // setup a public key
+    let changePubkey = await fromWallet.setSigningKey({
+      feeToken: process.settings.zksync.feeToken,
+    });
+
+    let receipt = await changePubkey.awaitReceipt();
+  }
+
+  console.log('sending tx...');
+
+  // send back to master wallet
+  let transferTransaction = await fromWallet.syncTransfer({
+    to: toAddress,
+    token: process.settings.zksync.tokenSymbol,
+    amount: zksync.utils.closestPackableTransactionAmount(
+      zksProvider.tokenSet.parseToken(
+        process.settings.zksync.tokenSymbol,
+        amount.toString()
+      )
+    ),
+    fee: zksync.utils.closestPackableTransactionFee(
+      zksProvider.tokenSet.parseToken(
+        process.settings.zksync.tokenSymbol,
+        fee.toString()
+      )
+    ),
+  });
+  let receipt = await transferTransaction.awaitReceipt();
+  return {
+    receipt,
+    txHash: transferTransaction.txHash,
+  };
 }
 
 module.exports = async () => {
-  //Init Web3.
-  web3 = new web3(process.settings.coin.infura);
-  //Create the Contract object.
-  contract = new web3.eth.Contract(
-    abi,
-    process.settings.coin.addresses.contract
+  // initiate provider
+
+  provider = ethers.getDefaultProvider(process.settings.zksync.network, {
+    infura: process.settings.zksync.infuraKey,
+  });
+
+  // setup mainwallet for gl
+  master = new ethers.Wallet.fromMnemonic(
+    process.settings.zksync.mnemonic,
+    process.settings.zksync.pathPrefix + 0
+  ).connect(provider);
+
+  // setup zksync wallet
+
+  zksProvider = await zksync.getDefaultProvider(
+    process.settings.zksync.network
   );
-  //Set the decimals and decimalsBN.
-  decimals = process.settings.coin.decimals;
-  decimalsBN = BN(10).pow(decimals);
+  zkSyncMaster = await zksync.Wallet.fromEthSigner(master, zksProvider);
 
-  //Set the master address.
-  master = process.settings.coin.addresses.wallet.toLowerCase();
+  // for this version of SDK, needs manually associate accountId
+  zkSyncMaster.accountId = await zkSyncMaster.getAccountId();
 
-  //Load every account.
-  addresses = [];
-  var filenames = fs.readdirSync(process.settings.coin.keys);
-  for (var file in filenames) {
-    var wallet = ethjsWallet.fromV3(
-      fs.readFileSync(process.settings.coin.keys + filenames[file]).toString(),
-      '',
-      true
-    );
-    //If this isn't the master address, add it to the address array.
-    var address = wallet.getChecksumAddressString().toString().toLowerCase();
-    if (address !== master) {
-      addresses.push(address);
-    }
-    //Add it to Web3.
-    web3.eth.accounts.wallet.add('0x' + wallet.getPrivateKey().toString('hex'));
+  // unlock the wallet
+  if (!(await zkSyncMaster.isSigningKeySet())) {
+    throw new Error('master account needs to set pubkey');
   }
-
-  //Init the TXs cache.
-  txs = {};
-  //Watch for transfers.
-  contract.events.Transfer(
-    {
-      fromBlock: await web3.eth.getBlockNumber(),
-    },
-    async (err, event) => {
-      if (err) {
-        /*eslint no-console: ["error", {allow: ["error"]}]*/
-        console.error(err);
-        return;
-      }
-
-      //Extract the data.
-      var data = event.returnValues;
-      //Make the addresses lower case.
-      data.from = data.from.toLowerCase();
-      data.to = data.to.toLowerCase();
-
-      //Make sure it's to us.
-      if (!(await ownAddress(data.to))) {
-        return;
-      }
-
-      // gwei price
-      let gwei = await getGas();
-
-      //Forward the tokens.
-      var transferFrom = await web3.eth.accounts.signTransaction(
-        {
-          to: process.settings.coin.addresses.contract,
-          data: await contract.methods
-            .transferFrom(data.to, master, data.value)
-            .encodeABI(),
-          gas: 160000,
-          gasPrice: gwei,
-        },
-        web3.eth.accounts.wallet[master].privateKey.toString()
-      );
-      web3.eth.sendSignedTransaction(transferFrom.rawTransaction);
-
-      var receipt;
-      do {
-        await sleep(5000);
-        receipt = await web3.eth.getTransactionReceipt(
-          web3.utils.sha3(transferFrom.rawTransaction)
-        );
-      } while (receipt == null);
-      if (!receipt.status) {
-        /*eslint no-console: ["error", {allow: ["error"]}]*/
-        console.error('Failed to forward the funds.');
-        return;
-      }
-
-      //Verify that worked.
-      if (receipt.status === false) {
-        /*eslint no-console: ["error", {allow: ["error"]}]*/
-        console.error(
-          'TX with hash ' +
-            event.transactionHash +
-            ' was not forwarded to the master.'
-        );
-        return;
-      }
-
-      //Make sure the address has a TX array.
-      if (typeof txs[data.to] === 'undefined') {
-        txs[data.to] = [];
-      }
-
-      //Push the TX.
-      txs[data.to].push({
-        txid: event.transactionHash,
-        amount: BN(data.value).div(decimalsBN).toString(),
-      });
-    }
-  );
 
   //Return the functions.
   return {
     createAddress: createAddress,
     ownAddress: ownAddress,
     getTransactions: getTransactions,
-    send: send,
+    provider: provider,
+    zksProvider: zksProvider,
+    sendTo: sendTo,
+    zkSyncMaster: zkSyncMaster,
   };
 };

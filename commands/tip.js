@@ -13,7 +13,8 @@ var symbol = process.settings.coin.symbol;
 
 module.exports = async (msg) => {
   //Tip details.
-  var pool, from, to, amount, tipInDollar;
+  var pool, from, to, amount;
+  var tipInDollar = BN(0);
 
   //Tip from an user.
   if (msg.text.length === 2) {
@@ -22,9 +23,9 @@ module.exports = async (msg) => {
     pool = false;
     from = msg.sender;
     to = msg.text[1].replace('!', ''); //Turn <!@ into <@.
-    tipInDollar = 5;
+    tipInDollar = BN(5); // default 5 dollars
     let price = await getPrice();
-    amount = tipInDollar / price;
+    amount = BN(tipInDollar).dividedBy(BN(price));
   } else if (msg.text.length === 3) {
     //Set the tip's details.
     pool = false;
@@ -33,16 +34,16 @@ module.exports = async (msg) => {
 
     // check if has a dollar sign
     if (msg.text[2].substr(0, 1) === '$') {
-      tipInDollar = parseFloat(msg.text[2].substring(1, msg.text[2].length));
-      if (isNaN(tipInDollar)) {
+      tipInDollar = BN(msg.text[2].substring(1, msg.text[2].length));
+      if (tipInDollar.isNaN()) {
         msg.obj.reply('You are tipping amount is incorrect');
         return;
       }
       let price = await getPrice();
-      amount = tipInDollar / price;
+      amount = BN(tipInDollar).dividedBy(BN(price));
     } else {
-      tipInDollar = 0;
-      amount = msg.text[2]; // tip tBTC directly
+      tipInDollar = BN(0);
+      amount = BN(msg.text[2]); // tip tBTC directly
     }
   } else {
     msg.obj.reply('You used the wrong amount of arguments.');
@@ -53,10 +54,6 @@ module.exports = async (msg) => {
   if (amount === 'all') {
     //Set the amount to the user's balance.
     amount = await process.core.users.getBalance(from);
-    //Else...
-  } else {
-    //Parse amount into a BN, yet make sure we aren't dealing with < 1 satoshi.
-    amount = BN(BN(amount).toFixed(process.settings.coin.decimals));
   }
 
   //If this is not a valid user, or a pool we're sending to...
@@ -96,7 +93,7 @@ module.exports = async (msg) => {
   //Add the amount to the target.
   await process.core.users.addBalance(to, amount);
 
-  if (tipInDollar == 0) {
+  if (tipInDollar.isEqualTo(BN(0))) {
     msg.obj.reply(
       'Sent ' +
         amount +
@@ -116,24 +113,5 @@ module.exports = async (msg) => {
         (pool ? ' via the ' + pools[from].printName + ' pool' : '') +
         '.'
     );
-  }
-
-  if (pool) {
-    for (var i in pools[from].admins) {
-      process.client.users
-        .get(pools[from].admins[i])
-        .send(
-          pools[from].printName +
-            ' pool update: <@' +
-            msg.sender +
-            '> sent ' +
-            amount +
-            ' ' +
-            symbol +
-            ' to <@' +
-            to +
-            '>.'
-        );
-    }
   }
 };

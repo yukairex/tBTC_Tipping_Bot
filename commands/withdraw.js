@@ -25,18 +25,20 @@ module.exports = async (msg) => {
   var amount = msg.text[1];
   //Amount with the withdrawl fee.
   var amountWFee;
+  // transfer fee
+  var transferFee = process.settings.zksync.transferFee;
 
   //If the amount is all...$
   if (amount === 'all') {
     //The amount with the fee is the user's balance.
     amountWFee = await process.core.users.getBalance(msg.sender);
     //The amount is the balance minus the fee.
-    amount = amountWFee.minus(BN(process.settings.coin.withdrawFee));
+    amount = amountWFee.minus(BN(transferFee));
     //Else...
   } else {
     //Parse the amount (limited to the satoshi), and add the withdraw fee.
     amount = BN(BN(amount).toFixed(process.settings.coin.decimals));
-    amountWFee = amount.plus(BN(process.settings.coin.withdrawFee));
+    amountWFee = amount.plus(BN(transferFee));
   }
 
   //Get the address by filtering the message again, but not calling toLowerCase this time since addresses are case sensitive.
@@ -52,10 +54,10 @@ module.exports = async (msg) => {
     .split(' ')[2];
 
   //If we own that address...
-  if (await process.core.coin.ownAddress(address)) {
-    msg.obj.author.send("You cannot withdraw to me. It's just network spam...");
-    return;
-  }
+  // if (await process.core.coin.ownAddress(address)) {
+  //   msg.obj.author.send("You cannot withdraw to me. It's just network spam...");
+  //   return;
+  // }
 
   //If we were unable to subtract the proper amount...
   if (!(await process.core.users.subtractBalance(msg.sender, amountWFee))) {
@@ -68,8 +70,10 @@ module.exports = async (msg) => {
   }
 
   //If we made it past the checks, send the funds.
-  var hash = await process.core.coin.send(address, amount);
-  if (typeof hash !== 'string') {
+  let fee = process.settings.zksync.transferFee;
+  let result = await process.core.coin.sendTo(0, address, amount, fee);
+
+  if (result.receipt.success !== true) {
     msg.obj.author.send(
       'Our node failed to create a TX! Is your address invalid?'
     );
@@ -77,5 +81,5 @@ module.exports = async (msg) => {
     return;
   }
 
-  msg.obj.author.send('Success! Your TX hash is ' + hash + '.');
+  msg.obj.author.send('Success! Your TX hash on zkSync is ' + result.txHash);
 };
