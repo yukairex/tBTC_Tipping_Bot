@@ -2,19 +2,25 @@
 var mysql = require('promise-mysql');
 var BN = require('bignumber.js');
 var axios = require('axios');
+var decimals = process.settings.coin.decimals;
 BN.config({
   ROUNDING_MODE: BN.ROUND_DOWN,
-  EXPONENTIAL_AT: process.settings.coin.decimals + 1,
+  EXPONENTIAL_AT: decimals + 1,
 });
 
 // load zkSync and ether.js
 const zksync = require('zksync');
 const ethers = require('ethers');
 
-//Definition of the table: `name VARCHAR(64), address VARCHAR(64), balance VARCHAR(64), notify tinyint(1)`.
-
 //MySQL connection and table vars.
 var connection, table;
+
+var tokenSymbol = process.settings.zksync.tokenSymbol;
+var network = process.settings.zksync.network;
+var URLprefix =
+  network == 'mainnet'
+    ? 'https://api.zksync.io/'
+    : `https://${network}-api.zksync.io/`;
 
 //RAM cache of users.
 var users = [];
@@ -93,7 +99,7 @@ async function addBalance(user, amount) {
   var balance = users[user].balance.plus(amount);
 
   //Convert the balance to the coin's smallest unit.
-  balance = balance.toFixed(process.settings.coin.decimals);
+  balance = balance.toFixed(decimals);
 
   //Update the table with the new balance, as a string.
   await connection.query(
@@ -122,7 +128,7 @@ async function subtractBalance(user, amount) {
   }
 
   //Convert the balance to the coin's smallest unit.
-  balance = balance.toFixed(process.settings.coin.decimals);
+  balance = balance.toFixed(decimals);
 
   //Update the table with the new balance, as a string.
   await connection.query(
@@ -171,8 +177,8 @@ function getTxId(user) {
 // listen for transaction happened on L2
 async function queryAccount(address, txid) {
   // return the transactions from restapi
-  let url = `https://rinkeby-api.zksync.io/api/v0.1/account/${address}/history/newer_than?tx_id=${txid}`;
-  console.log(url);
+  let url = `${URLprefix}api/v0.1/account/${address}/history/newer_than?tx_id=${txid}`;
+  //console.log(url);
   let { data } = await axios.get(url);
   return data;
 }
@@ -225,7 +231,7 @@ module.exports = async () => {
 
 //Every thirty seconds, check the TXs of users
 setInterval(async () => {
-  console.log('checking deposits');
+  console.log(' ================== checking deposits ==================');
   for (var user in users) {
     //If that user doesn't have an address, continue.
 
@@ -233,7 +239,7 @@ setInterval(async () => {
       continue;
     }
 
-    console.log(user, 'checking');
+    console.log('checking user', users[user].id);
     // query tx from zkSync rest api, need to add 1 from repetitive result
     var txs = await queryAccount(getAddress(user), getTxId(user));
 
@@ -257,9 +263,9 @@ setInterval(async () => {
     for (var tx of txs) {
       // calculate total amount from L1 deposit
       if (tx.tx.type == 'Deposit' && tx.commited === true) {
-        if (tx.tx.priority_op.token == process.settings.zksync.tokenSymbol) {
+        if (tx.tx.priority_op.token == tokenSymbol) {
           let amount = process.core.coin.zksProvider.tokenSet.formatToken(
-            process.settings.zksync.tokenSymbol,
+            tokenSymbol,
             tx.tx.priority_op.amount
           );
           deposited = deposited.plus(BN(amount));
@@ -270,10 +276,10 @@ setInterval(async () => {
       if (tx.tx.type == 'Transfer' && tx.commited === true) {
         if (
           tx.tx.to.toLowerCase() == getAddress(user).toLowerCase() &&
-          tx.tx.token == process.settings.zksync.tokenSymbol
+          tx.tx.token == tokenSymbol
         ) {
           let amount = process.core.coin.zksProvider.tokenSet.formatToken(
-            process.settings.zksync.tokenSymbol,
+            tokenSymbol,
             tx.tx.amount
           );
           deposited = deposited.plus(BN(amount));
@@ -281,10 +287,14 @@ setInterval(async () => {
       }
     }
 
-    deposited = deposited.toFixed(process.settings.coin.decimals);
+    deposited = deposited.toFixed(decimals);
 
     //update balance
-    console.log('updating user', user, 'total deposit', deposited);
+    if (deposited.toString() > 0) {
+      console.log('found a tx');
+      console.log('updating user', users[user].id, 'total deposit', deposited);
+    }
+
     await addBalance(user, deposited);
   }
 }, 10 * 1000);
@@ -302,10 +312,10 @@ setInterval(async () => {
       users[user].address
     );
 
-    let balance = state.committed.balances[process.settings.zksync.tokenSymbol];
+    let balance = state.committed.balances[tokenSymbol];
     if (balance !== undefined) {
       balance = process.core.coin.zksProvider.tokenSet.formatToken(
-        process.settings.zksync.tokenSymbol,
+        tokenSymbol,
         balance
       );
       // set balance in BN
@@ -314,18 +324,20 @@ setInterval(async () => {
       balance = BN(0);
     }
 
-    let fee = BN(process.settings.zksync.transferFee);
+    let fee = await process.core.coin.queryFee(
+      'Transfer',
+      process.core.coin.zkSyncMaster.address()
+    );
 
     balance = BN(balance);
     if (balance.minus(fee).gt(fee)) {
+      console.log('transfer deposit from user ', users[user].id, ' to master');
       // do not transfer if amount is smaller than fee
       // transfer back the token to master account
-      let amount = balance.minus(fee).minus(fee);
       await process.core.coin.sendTo(
         users[user].id,
         process.core.coin.zkSyncMaster.address(), // send to master address
-        amount,
-        fee
+        balance
       );
     }
   }

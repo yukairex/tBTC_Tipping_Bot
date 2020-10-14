@@ -1,28 +1,12 @@
-//fs standard lib.
-var fs = require('fs');
-
 //Async sleep lib.
 var sleep = require('await-sleep');
 
 //BigNumber lib.
 var BN = require('bignumber.js');
 
-//EthereumJS-Wallet lib.
-var ethjsWallet = require('ethereumjs-wallet');
-
-// gas api
-var getGas = require('../api/gas');
-
-//Web3 lib.
-var web3 = require('web3');
-
 // load zkSync and ether.js
 const zksync = require('zksync');
 const ethers = require('ethers');
-
-//Decimals in the ERC20.
-var decimals;
-var decimalsBN;
 
 //Master address wallet on mainnet and zkSync.
 var master, zkSyncMaster;
@@ -33,6 +17,13 @@ var provider, zksProvider; // make it global
 //RAM cache of the addresses and TXs.
 var addresses = [];
 var txs = {};
+
+// load setting variables
+var network = process.settings.zksync.network;
+var infuraKey = process.settings.zksync.infuraKey;
+var changePublicKeyFee = process.settings.zksync.changePublicKeyFee;
+var feeToken = process.settings.zksync.feeToken;
+var tokenSymbol = process.settings.zksync.tokenSymbol;
 
 //Checks an amount for validity.
 async function checkAmount(amount) {
@@ -92,84 +83,130 @@ async function getSyncWallet(senderId) {
   return syncWallet;
 }
 
-async function sendTo(senderId, toAddress, amount, fee) {
+async function sendTo(senderId, toAddress, amount) {
   // send from fromWallet to master account amount of token
+  // fee and value will be deducted from the account
 
   // senderId is an integer number to derive the private key
   // toAddress is an 0x address
-  // amount and fee are BN
-  if (!checkAmount(amount)) return false;
-  if (!checkAmount(fee)) return false;
+  // amount is total amount to send with tx fee
 
-  // check if amount is smaller than fee, do not transfer
-  if (amount.lt(fee)) {
-    return false;
+  if (!checkAmount(amount)) return false;
+
+  // query fee, return BN
+  let fee = await queryFee('Transfer', toAddress);
+
+  // load wallet
+  let fromWallet = await getSyncWallet(senderId);
+
+  // check if signing fee is paid
+  var signFee = BN(0);
+  if (!(await fromWallet.isSigningKeySet())) {
+    signFee = BN(changePublicKeyFee);
   }
 
-  let fromWallet = await getSyncWallet(senderId);
-  console.log('sender wallet:', fromWallet.address());
+  if (amount.lt(fee.plus(signFee))) {
+    // check if amount is smaller than fee, do not transfer
+    console.log('not enough balance');
+    return false;
+  } else {
+    amount = amount.minus(fee).minus(signFee); // update real amount to send
+  }
+
+  console.log(
+    'constructing tx from',
+    fromWallet.address(),
+    ' to',
+    toAddress,
+    ',amount:',
+    amount.toString()
+  );
+
   let balance = zksProvider.tokenSet.formatToken(
-    process.settings.zksync.tokenSymbol,
-    await fromWallet.getBalance(process.settings.zksync.tokenSymbol)
+    tokenSymbol,
+    await fromWallet.getBalance(tokenSymbol)
   );
 
   balance = BN(balance);
 
-  console.log(balance.toString());
-  console.log(amount.toString());
-  console.log(fee.toString());
+  console.log('user balance:', balance.toString());
+  console.log('send amount:', amount.toString());
+  console.log('total fee amount:', fee.plus(signFee).toString());
 
-  if (balance.lt(amount.plus(fee))) {
+  if (balance.lt(amount.plus(fee).plus(signFee))) {
     console.log('insufficient balance');
     return;
   }
 
-  if (!(await fromWallet.isSigningKeySet())) {
-    console.log('setting signing key...');
-    // checking if public key has been assigned
-    if ((await fromWallet.getAccountId()) == undefined) {
-      throw new Error('Unknwon account');
-    }
-
-    // setup a public key
-    let changePubkey = await fromWallet.setSigningKey({
-      feeToken: process.settings.zksync.feeToken,
-    });
-
-    let receipt = await changePubkey.awaitReceipt();
-  }
-
-  console.log('sending tx...');
+  // setting up public key if not set before
+  await setupPublicKey(fromWallet);
 
   // send back to master wallet
   let transferTransaction = await fromWallet.syncTransfer({
     to: toAddress,
-    token: process.settings.zksync.tokenSymbol,
+    token: tokenSymbol,
     amount: zksync.utils.closestPackableTransactionAmount(
-      zksProvider.tokenSet.parseToken(
-        process.settings.zksync.tokenSymbol,
-        amount.toString()
-      )
+      zksProvider.tokenSet.parseToken(tokenSymbol, amount.toString())
     ),
     fee: zksync.utils.closestPackableTransactionFee(
-      zksProvider.tokenSet.parseToken(
-        process.settings.zksync.tokenSymbol,
-        fee.toString()
-      )
+      zksProvider.tokenSet.parseToken(tokenSymbol, fee.toString())
     ),
   });
+
   let receipt = await transferTransaction.awaitReceipt();
+  console.log('tx receipt:', receipt.success);
   return {
     receipt,
     txHash: transferTransaction.txHash,
   };
 }
 
+async function queryFee(operation, address) {
+  try {
+    let txFee = await zksProvider.getTransactionFee(
+      operation,
+      address,
+      feeToken
+    );
+    return BN(
+      zksProvider.tokenSet.formatToken(feeToken, txFee.totalFee.toString())
+    );
+  } catch (err) {
+    console.log(err);
+  }
+
+  throw new Error('invalid operation');
+}
+
+async function setupPublicKey(wallet) {
+  // return sign fee
+
+  // first time needs to setup public key
+  if (!(await wallet.isSigningKeySet())) {
+    console.log('setting signing key...');
+    // checking if public key has been assigned
+    if ((await wallet.getAccountId()) == undefined) {
+      throw new Error('Unknwon account');
+    }
+
+    // query fee
+    const changePubkey = await wallet.setSigningKey({
+      feeToken: feeToken,
+      fee: ethers.utils.parseEther(changePublicKeyFee),
+    });
+
+    let receipt = await changePubkey.awaitReceipt();
+    console.log('setting up publick key:', receipt.success);
+    return changePublicKeyFee;
+  }
+  return BN(0);
+}
+
 module.exports = async () => {
   // initiate provider
 
-  provider = ethers.getDefaultProvider(process.settings.zksync.network, {
-    infura: process.settings.zksync.infuraKey,
+  provider = ethers.getDefaultProvider(network, {
+    infura: infuraKey,
   });
 
   // setup mainwallet for gl
@@ -180,18 +217,13 @@ module.exports = async () => {
 
   // setup zksync wallet
 
-  zksProvider = await zksync.getDefaultProvider(
-    process.settings.zksync.network
-  );
+  zksProvider = await zksync.getDefaultProvider(network);
   zkSyncMaster = await zksync.Wallet.fromEthSigner(master, zksProvider);
 
   // for this version of SDK, needs manually associate accountId
   zkSyncMaster.accountId = await zkSyncMaster.getAccountId();
 
-  // unlock the wallet
-  if (!(await zkSyncMaster.isSigningKeySet())) {
-    throw new Error('master account needs to set pubkey');
-  }
+  await setupPublicKey(zkSyncMaster);
 
   //Return the functions.
   return {
@@ -202,5 +234,6 @@ module.exports = async () => {
     zksProvider: zksProvider,
     sendTo: sendTo,
     zkSyncMaster: zkSyncMaster,
+    queryFee: queryFee,
   };
 };
