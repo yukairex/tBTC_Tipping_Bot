@@ -8,34 +8,34 @@ var fee = process.settings.coin.withdrawFee;
 var help = `
 **Keep Discord TIPBOT COMMAND LIST**
 
-This bot allows you to tip and make payment to any Discord user with tBTC on **zkSync L2** zkrollup network
+This bot allows you to tip and make payment to any Discord user with tBTC on ⚡️ **zkSync L2** ⚡️ zkrollup network
 
 To run a command, either preface it with "$" ("$deposit", "$tip").
 
 This bot does use decimals, and has ${decimals} decimals of accuracy. You can also use "all" instead of any AMOUNT to tip/withdraw your entire balance.
 
--- *$balance*
+🏦 -- *$balance*
 Prints your balance.
 
--- *$tip <@PERSON>*
+💵 -- *$tip <@PERSON>*
 Tips the person $5.
 
--- *$tip <@PERSON> $<AMOUNT>*
+💵 -- *$tip <@PERSON> $<AMOUNT>*
 Tips the person amount of **dollar**.
 
--- *$tip <@PERSON> <AMOUNT>*
+💵 -- *$tip <@PERSON> <AMOUNT>*
 Tips the person that amount of **${symbol}**.
 
--- *$tip <@PERSON> all*
+💵 -- *$tip <@PERSON> all*
 Tips all your balance to this person.
 
--- *$withdraw <AMOUNT of tBTC> <ADDRESS>*
+🏧 --  *$withdraw <AMOUNT of tBTC> <ADDRESS>*
 Withdraws AMOUNT of tBTC to ADDRESS on zkSync network. Message in DM
 
--- *$withdraw all <ADDRESS>*
+🏧 --  *$withdraw all <ADDRESS>*
 Withdraws all your tBTC to ADDRESS on zkSync network. Message in DM
 
--- *$deposit*
+💰 --  *$deposit*
 Prints your personal deposit address in DM. This deposit has been on zkSync Network https://wallet.zksync.io/account
 
 Contact @Crypto Investor #3523 if any question

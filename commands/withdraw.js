@@ -96,7 +96,7 @@ module.exports = async (msg) => {
   console.log('processing withdraw to:', address);
   console.log('tx:', result.txHash);
   msg.obj.author.send(
-    'Success! Your TX hash on zkSync is ' +
+    '🚀 Success! Your TX hash on zkSync is ' +
       process.settings.zksync.explorerURL +
       result.txHash.split(':')[1]
   );

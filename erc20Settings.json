@@ -30,17 +30,13 @@
     "example": ["CHANNEL ID"]
   },
 
-  "pools": {
-    "pool": {
-      "printName": "Pool",
-      "admins": ["USER ID"],
-      "members": []
-    },
-
-    "giveaways": {
-      "printName": "Giveaways",
-      "admins": [],
-      "members": []
-    }
+  "zksync": {
+    "network": "mainnet",
+    "infuraKey": "",
+    "mnemonic": "",
+    "pathPrefix": "m/44'/60'/0'/0/",
+    "feeToken": "TBTC",
+    "tokenSymbol": "TBTC",
+    "explorerURL": "https://zkscan.io/explorer/transactions/"
   }
 }
