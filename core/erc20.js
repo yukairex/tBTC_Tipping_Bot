@@ -21,7 +21,6 @@ var txs = {};
 // load setting variables
 var network = process.settings.zksync.network;
 var infuraKey = process.settings.zksync.infuraKey;
-var changePublicKeyFee = process.settings.zksync.changePublicKeyFee;
 var feeToken = process.settings.zksync.feeToken;
 var tokenSymbol = process.settings.zksync.tokenSymbol;
 
@@ -102,7 +101,7 @@ async function sendTo(senderId, toAddress, amount) {
   // check if signing fee is paid
   var signFee = BN(0);
   if (!(await fromWallet.isSigningKeySet())) {
-    signFee = BN(changePublicKeyFee);
+    signFee = await queryPublicKeyChangeFee(toAddress);
   }
 
   if (amount.lt(fee.plus(signFee))) {
@@ -174,8 +173,6 @@ async function queryFee(operation, address) {
   } catch (err) {
     console.log(err);
   }
-
-  throw new Error('invalid operation');
 }
 
 async function setupPublicKey(wallet) {
@@ -189,10 +186,12 @@ async function setupPublicKey(wallet) {
       throw new Error('Unknwon account');
     }
 
+    console.log(wallet.address());
     // query fee
+    let changePublicKeyFee = await queryPublicKeyChangeFee(wallet.address());
     const changePubkey = await wallet.setSigningKey({
       feeToken: feeToken,
-      fee: ethers.utils.parseEther(changePublicKeyFee),
+      fee: ethers.utils.parseEther(changePublicKeyFee.toString()),
     });
 
     let receipt = await changePubkey.awaitReceipt();
@@ -200,6 +199,24 @@ async function setupPublicKey(wallet) {
     return changePublicKeyFee;
   }
   return BN(0);
+}
+
+async function queryPublicKeyChangeFee(address) {
+  let txType = {
+    ChangePubKey: {
+      feeToken: tokenSymbol,
+      onchainPubkeyAuth: false,
+    },
+  };
+
+  try {
+    let txFee = await zksProvider.getTransactionFee(txType, address, feeToken);
+    return BN(
+      zksProvider.tokenSet.formatToken(feeToken, txFee.totalFee.toString())
+    );
+  } catch (err) {
+    console.log(err);
+  }
 }
 
 module.exports = async () => {

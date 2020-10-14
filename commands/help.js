@@ -8,7 +8,7 @@ var fee = process.settings.coin.withdrawFee;
 var help = `
 **Keep Discord TIPBOT COMMAND LIST**
 
-This bot allows you to tip and make payment to any Discord user with tBTC on Ethereum mainnet
+This bot allows you to tip and make payment to any Discord user with tBTC on **zkSync L2** zkrollup network
 
 To run a command, either preface it with "$" ("$deposit", "$tip").
 
@@ -30,14 +30,13 @@ Tips the person that amount of **${symbol}**.
 Tips all your balance to this person.
 
 -- *$withdraw <AMOUNT of tBTC> <ADDRESS>*
-Withdraws AMOUNT of tBTC to ADDRESS, charging a **${fee}** ${symbol} fee. Message in DM
+Withdraws AMOUNT of tBTC to ADDRESS on zkSync network. Message in DM
 
 -- *$withdraw all <ADDRESS>*
-Withdraws all your tBTC to ADDRESS, charging a **${fee}** ${symbol} fee. Message in DM
+Withdraws all your tBTC to ADDRESS on zkSync network. Message in DM
 
 -- *$deposit*
-Prints your personal deposit address in DM.
-** The first time generating your address may take minutes...depending on ethereum network congestion **
+Prints your personal deposit address in DM. This deposit has been on zkSync Network https://wallet.zksync.io/account
 
 Contact @Crypto Investor #3523 if any question
 https://github.com/yukairex/tBTC_Tipping_Bot
@@ -51,11 +50,3 @@ module.exports = async (msg) => {
     },
   });
 };
-
-// module.exports = async (msg) => {
-//   msg.obj.author.send({
-//     embed: {
-//       description: help,
-//     },
-//   });
-// };
