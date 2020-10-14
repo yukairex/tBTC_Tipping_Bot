@@ -25,7 +25,9 @@ module.exports = async (msg) => {
     to = msg.text[1].replace('!', ''); //Turn <!@ into <@.
     tipInDollar = BN(5); // default 5 dollars
     let price = await getPrice();
-    amount = BN(tipInDollar).dividedBy(BN(price));
+    amount = BN(tipInDollar)
+      .dividedBy(BN(price))
+      .toFixed(process.settings.coin.decimals);
   } else if (msg.text.length === 3) {
     //Set the tip's details.
     pool = false;
@@ -40,10 +42,12 @@ module.exports = async (msg) => {
         return;
       }
       let price = await getPrice();
-      amount = BN(tipInDollar).dividedBy(BN(price));
+      amount = BN(tipInDollar)
+        .dividedBy(BN(price))
+        .toFixed(process.settings.coin.decimals);
     } else {
       tipInDollar = BN(0);
-      amount = BN(msg.text[2]); // tip tBTC directly
+      amount = BN(msg.text[2]).toFixed(process.settings.coin.decimals); // tip tBTC directly
     }
   } else {
     msg.obj.reply('You used the wrong amount of arguments.');

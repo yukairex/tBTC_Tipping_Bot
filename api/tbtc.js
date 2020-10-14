@@ -1,7 +1,6 @@
 // fetch tbtc price from coingekko
 
 const axios = require('axios');
-
 const tbtcCoingecko =
   'https://api.coingecko.com/api/v3/simple/price?ids=tbtc&vs_currencies=usd';
 
