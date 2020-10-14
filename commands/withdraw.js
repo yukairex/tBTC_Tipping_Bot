@@ -93,7 +93,7 @@ module.exports = async (msg) => {
     return;
   }
 
-  console.log('processing withdraw to:', address);
+  console.log('👀 processing withdraw to:', address);
   console.log('tx:', result.txHash);
   msg.obj.author.send(
     '🚀 Success! Your TX hash on zkSync is ' +
