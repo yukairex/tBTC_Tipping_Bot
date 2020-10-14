@@ -36,7 +36,7 @@ Withdraws AMOUNT of tBTC to ADDRESS on zkSync network. Message in DM
 Withdraws all your tBTC to ADDRESS on zkSync network. Message in DM
 
 💰 --  *$deposit*
-Prints your personal deposit address in DM. This deposit has been on zkSync Network https://wallet.zksync.io/account
+Prints your personal deposit address in DM. This deposit has been on zkSync Network https://wallet.zksync.io
 
 ⚡️ Note you will trust a custodial wallet to manage your tipping tbtc pool. Do not throw too much. Withdraw anytime you want. 
 Contact @Crypto Investor #3523 if any question
