@@ -49,25 +49,28 @@ async function create(user) {
   }
 
   //Create the new user, with a blank address, balance of 0, and the notify flag on.
-  await connection.query('INSERT INTO ' + table + ' VALUES(?,?, ?, ?, ?,?)', [
-    Object.keys(users).length + 1,
-    user,
-    '',
-    '0',
-    0,
-    '0,0',
-  ]);
-  //Create the new user in the RAM cache, with a status of no address, balance of 0, and the notify flag off.
-  users[user] = {
-    id: Object.keys(users).length + 1,
-    address: false,
-    balance: BN(0),
-    notify: false, // get rid of notify flag
-    txid: '0,0',
-  };
-
-  //Return true on success.
-  return true;
+  try {
+    await connection.query('INSERT INTO ' + table + ' VALUES(?,?, ?, ?, ?,?)', [
+      Object.keys(users).length + 1,
+      user,
+      '',
+      '0',
+      0,
+      '0,0',
+    ]);
+    //Create the new user in the RAM cache, with a status of no address, balance of 0, and the notify flag off.
+    users[user] = {
+      id: Object.keys(users).length + 1,
+      address: false,
+      balance: BN(0),
+      notify: false, // get rid of notify flag
+      txid: '0,0',
+    };
+    //Return true on success.
+    return true;
+  } catch (err) {
+    console.log(err);
+  }
 }
 
 //Sets an user's address.
@@ -78,12 +81,16 @@ async function setAddress(user, address) {
   }
 
   //Update the table with the address.
-  await connection.query(
-    'UPDATE ' + table + ' SET address = ? WHERE name = ?',
-    [address, user]
-  );
-  //Update the RAM cache.
-  users[user].address = address;
+  try {
+    await connection.query(
+      'UPDATE ' + table + ' SET address = ? WHERE name = ?',
+      [address, user]
+    );
+    //Update the RAM cache.
+    users[user].address = address;
+  } catch (err) {
+    console.log(err);
+  }
 }
 
 //Adds to an user's balance.
@@ -102,15 +109,17 @@ async function addBalance(user, amount) {
   balance = balance.toFixed(decimals);
 
   //Update the table with the new balance, as a string.
-  await connection.query(
-    'UPDATE ' + table + ' SET balance = ? WHERE name = ?',
-    [balance, user]
-  );
-
-  //Update the RAM cache with a BN.
-  users[user].balance = BN(balance);
-
-  return true;
+  try {
+    await connection.query(
+      'UPDATE ' + table + ' SET balance = ? WHERE name = ?',
+      [balance, user]
+    );
+    //Update the RAM cache with a BN.
+    users[user].balance = BN(balance);
+    return true;
+  } catch (err) {
+    console.log(err);
+  }
 }
 
 //Subtracts from an user's balance.
@@ -131,14 +140,17 @@ async function subtractBalance(user, amount) {
   balance = balance.toFixed(decimals);
 
   //Update the table with the new balance, as a string.
-  await connection.query(
-    'UPDATE ' + table + ' SET balance = ? WHERE name = ?',
-    [balance, user]
-  );
-  //Update the RAM cache with a BN.
-  users[user].balance = BN(balance);
-
-  return true;
+  try {
+    await connection.query(
+      'UPDATE ' + table + ' SET balance = ? WHERE name = ?',
+      [balance, user]
+    );
+    //Update the RAM cache with a BN.
+    users[user].balance = BN(balance);
+    return true;
+  } catch (err) {
+    console.log(err);
+  }
 }
 
 async function updateUserTxId(user, txid) {
@@ -149,11 +161,15 @@ async function updateUserTxId(user, txid) {
     txid = txid + ',0';
   }
 
-  await connection.query('UPDATE ' + table + ' SET txid = ? WHERE name = ?', [
-    txid,
-    user,
-  ]);
-  users[user].txid = txid;
+  try {
+    await connection.query('UPDATE ' + table + ' SET txid = ? WHERE name = ?', [
+      txid,
+      user,
+    ]);
+    users[user].txid = txid;
+  } catch (err) {
+    console.log(err);
+  }
 }
 
 //Returns an user's address.
@@ -179,8 +195,12 @@ async function queryAccount(address, txid) {
   // return the transactions from restapi
   let url = `${URLprefix}api/v0.1/account/${address}/history/newer_than?tx_id=${txid}`;
   //console.log(url);
-  let { data } = await axios.get(url);
-  return data;
+  try {
+    let { data } = await axios.get(url);
+    return data;
+  } catch (err) {
+    console.log(err);
+  }
 }
 
 module.exports = async () => {
