@@ -297,7 +297,7 @@ setInterval(async () => {
 
     await addBalance(user, deposited);
   }
-}, 10 * 1000);
+}, 30 * 1000);
 
 // set interval for balance looping back
 
@@ -341,4 +341,4 @@ setInterval(async () => {
       );
     }
   }
-}, 10 * 1000);
+}, 60 * 1000);
