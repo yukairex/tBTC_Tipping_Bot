@@ -234,7 +234,7 @@ module.exports = async () => {
 
   // setup zksync wallet
 
-  zksProvider = await zksync.getDefaultProvider(network);
+  zksProvider = await zksync.getDefaultProvider(network, 'HTTP');
   zkSyncMaster = await zksync.Wallet.fromEthSigner(master, zksProvider);
 
   // for this version of SDK, needs manually associate accountId
