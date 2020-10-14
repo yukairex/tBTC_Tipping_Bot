@@ -125,6 +125,7 @@ async function addBalance(user, amount) {
 //Subtracts from an user's balance.
 async function subtractBalance(user, amount) {
   //Return false if the amount is invalid.
+  amount = BN(amount);
   if (!(await checkAmount(amount))) {
     return false;
   }
