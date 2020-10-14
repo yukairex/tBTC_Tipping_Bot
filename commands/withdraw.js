@@ -81,7 +81,7 @@ module.exports = async (msg) => {
     return;
   }
 
-  msg.obj.author.send('Withdraw Processing.. ');
+  msg.obj.author.send('👀 Withdraw processing request.. ');
   //If we made it past the checks, send the funds.
   let result = await process.core.coin.sendTo(0, address, amountWFee);
 
@@ -93,7 +93,7 @@ module.exports = async (msg) => {
     return;
   }
 
-  console.log('👀 processing withdraw to:', address);
+  console.log('processing withdraw to:', address);
   console.log('tx:', result.txHash);
   msg.obj.author.send(
     '🚀 Success! Your TX hash on zkSync is ' +
