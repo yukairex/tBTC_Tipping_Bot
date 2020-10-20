@@ -197,8 +197,10 @@ async function queryAccount(address, txid) {
   let url = `${URLprefix}api/v0.1/account/${address}/history/newer_than?tx_id=${txid}`;
   //console.log(url);
   try {
-    let { data } = await axios.get(url);
-    return data;
+    let res = await axios.get(url);
+    // console.log(res.statusCode);
+    // console.log(res);
+    return res.data;
   } catch (err) {
     console.log(err);
   }
@@ -212,6 +214,11 @@ module.exports = async () => {
     user: process.settings.mysql.user,
     password: process.settings.mysql.pass,
   });
+
+  connection.on('error', function (err) {
+    console.error('CONNECT FAILED', err.code);
+  });
+
   //Set the table from the settings.
   table = process.settings.mysql.tips;
 
