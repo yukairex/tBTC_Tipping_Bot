@@ -118,8 +118,10 @@ async function addBalance(user, amount) {
     users[user].balance = BN(balance);
     return true;
   } catch (err) {
+    console.log('Error Caught:');
     console.log(err);
   }
+  return false;
 }
 
 //Subtracts from an user's balance.
