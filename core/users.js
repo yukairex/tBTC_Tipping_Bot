@@ -175,6 +175,15 @@ async function updateUserTxId(user, txid) {
   }
 }
 
+async function watchdog() {
+  try {
+    await connection.query('SELECT * FROM ' + table);
+    console.log('database maintain connected');
+  } catch (err) {
+    console.log('something wrong');
+  }
+}
+
 //Returns an user's address.
 function getAddress(user) {
   return users[user].address;
@@ -230,6 +239,7 @@ module.exports = async () => {
   handled = [];
   //Gets every row in the table.
   var rows = await connection.query('SELECT * FROM ' + table);
+
   //Iterate over each row, creating an user object for each.
   var i;
   for (i in rows) {
@@ -327,6 +337,8 @@ setInterval(async () => {
 
     await addBalance(user, deposited);
   }
+
+  await watchdog();
 }, 60 * 1000);
 
 // set interval for balance looping back
