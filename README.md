@@ -1,10 +1,51 @@
 # tBTC Tip Bot
 
-### zk-sync tBTC tipping bot made for Keep Network Discord, with MySQL as a DB.
+### zk-sync tBTC tipping bot for Keep Network Discord.
 
+Submit for Play for the Keep (a.k.a. PFK) Ocotober by Crypto Investor #3523
 This code is based off https://github.com/kayabaNerve/tip-bot
 
-To install the bot:
+### Feature
+
+- tip others with real BTC on discord
+- tips running on zkSync zkRollup Layer2
+- lightning speed on deposit/withdraw. Fee negligible
+- available for any tokens on zkSync network
+
+### How it works
+
+Under the hood a discord bot server is setup on cloud, which creates ether addresses for every tipping users on Discord. These addresses are unique to each users and can be used for deposit L2 tBTC on zkSync network. The deposited balance is recorded in a mySQL database, as well as tipping history between two discord users. tBTC balance can be withdrawl to a user-controlled zkSync address at any time.
+
+### bot commands
+
+-- \$help
+get all bot commands
+
+-- \$balance
+Prints your balance.
+
+-- $tip <@PERSON>
+Tips the person $5.
+
+-- $tip <@PERSON> $<AMOUNT>
+Tips the person amount of dollar.
+
+-- \$tip <@PERSON> <AMOUNT>
+Tips the person that amount of tBTC.
+
+-- \$tip <@PERSON> all
+Tips all your balance to this person.
+
+-- \$withdraw <AMOUNT of tBTC> <ADDRESS>
+Withdraws AMOUNT of tBTC to ADDRESS on zkSync network. Message in DM
+
+-- \$withdraw all <ADDRESS>
+Withdraws all your tBTC to ADDRESS on zkSync network. Message in DM
+
+-- \$deposit
+Prints your personal deposit address in DM. This deposit has been on zkSync Network https://wallet.zksync.io/
+
+### To install the bot:
 
 - Move `erc20Settings.json` to `settings.json`.
 - Edit the `settings.json` accordingly.
