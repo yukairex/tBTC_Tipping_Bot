@@ -1,16 +1,16 @@
 # tBTC Tip Bot
 
-### zk-sync tBTC tipping bot for Keep Network Discord.
+## zk-sync tBTC tipping bot for Keep Network Discord.
 
 Submit for Play for the Keep (a.k.a. PFK) Ocotober by Crypto Investor #3523
 This code is based off https://github.com/kayabaNerve/tip-bot
 
 ### Feature
 
-- tip others with real BTC on discord
-- tips running on zkSync zkRollup Layer2
-- lightning speed on deposit/withdraw. Fee negligible
-- available for any tokens on zkSync network
+- tip other users with BTC on discord
+- support deposit/withdraw with negligible fee
+- running on zkSync zkRollup layer2, lightning speed and no gas cost
+- easily extendable to any tokens on zkSync network
 
 ### How it works
 
@@ -18,34 +18,33 @@ Under the hood a discord bot server is setup on cloud, which creates ether addre
 
 ### bot commands
 
--- \$help
-get all bot commands
+`$help` get all bot commands
 
--- \$balance
-Prints your balance.
+`$balance` Prints your balance.
 
--- $tip <@PERSON>
-Tips the person $5.
+`$tip <@PERSON>` Tips the person \$5.
 
--- $tip <@PERSON> $<AMOUNT>
-Tips the person amount of dollar.
+` $tip <@PERSON> $<AMOUNT>` Tips the person amount of dollar.
 
--- \$tip <@PERSON> <AMOUNT>
-Tips the person that amount of tBTC.
+`$tip <@PERSON> <AMOUNT>` Tips the person that amount of tBTC.
 
--- \$tip <@PERSON> all
-Tips all your balance to this person.
+`$tip <@PERSON> all` Tips all your balance to this person.
 
--- \$withdraw <AMOUNT of tBTC> <ADDRESS>
+` $withdraw <AMOUNT of tBTC> <ADDRESS>`
 Withdraws AMOUNT of tBTC to ADDRESS on zkSync network. Message in DM
 
--- \$withdraw all <ADDRESS>
+`$withdraw all <ADDRESS>`
 Withdraws all your tBTC to ADDRESS on zkSync network. Message in DM
 
--- \$deposit
+`$deposit `
 Prints your personal deposit address in DM. This deposit has been on zkSync Network https://wallet.zksync.io/
 
-### To install the bot:
+### zkSync Reference
+
+- general FAQ https://zksync.io/dev/tutorial.html
+- dev guidance https://zksync.io/dev/
+
+### To install the bot
 
 - Move `erc20Settings.json` to `settings.json`.
 - Edit the `settings.json` accordingly.
