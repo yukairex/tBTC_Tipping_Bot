@@ -67,3 +67,7 @@ Prints your personal deposit address in DM. This deposit has been on zkSync Netw
     - `user` set to the value gotten by right-clicking the bot on your server and clicking `Copy ID`. This requires `Developer Mode` to be enabled on your
 - Install NodeJS dependencies via `npm i`.
   - `discord.js` will print several warnings about requiring a peer but none was installed. These are normal, and refer to optional packages for connecting to voice channels, something we don't do.
+
+### Docker
+
+To build your container, run either `npm run build` from the project's root dir, or `docker build .`.  Once your image is created on your local disk, run the container with `docker run -d $IMAGE_ID`.  You can get the $IMAGE_ID by running `docker image ls`.
