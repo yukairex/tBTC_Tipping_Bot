@@ -45,7 +45,7 @@ https://github.com/yukairex/tBTC_Tipping_Bot
 
 // reply help in the current channel
 module.exports = async (msg) => {
-  msg.obj.reply({
+  msg.obj.author.send({
     embed: {
       description: help,
     },
