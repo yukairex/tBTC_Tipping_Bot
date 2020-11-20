@@ -1,3 +1,5 @@
+var getPrice = require('../api/tbtc');
+var BN = require('bignumber.js');
 var pools = process.settings.pools;
 
 module.exports = async (msg) => {
@@ -36,11 +38,18 @@ module.exports = async (msg) => {
   }
 
   //If no argument was provided, tell the user thir balance.
+
+  let balance = await process.core.users.getBalance(msg.sender).toFixed(8);
+  let tbtcPrice = await getPrice();
+  let balanceInUSD = balance * tbtcPrice * 0.9995; // ensure not over tip
+
   msg.obj.reply(
-    'You have ' +
-      (await process.core.users.getBalance(msg.sender)).toString() +
+    '💰 You have ' +
+      balance +
       ' ' +
       process.settings.coin.symbol +
-      '.'
+      ' (' +
+      balanceInUSD.toFixed(2) +
+      'usd)'
   );
 };
