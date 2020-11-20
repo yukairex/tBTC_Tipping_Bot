@@ -38,7 +38,7 @@ module.exports = async (msg) => {
     if (msg.text[2].substr(0, 1) === '$') {
       tipInDollar = BN(msg.text[2].substring(1, msg.text[2].length));
       if (tipInDollar.isNaN()) {
-        msg.obj.reply('You are tipping amount is incorrect');
+        msg.obj.reply('Your tipping amount is incorrect');
         return;
       }
       let price = await getPrice();
@@ -50,12 +50,13 @@ module.exports = async (msg) => {
       amount = BN(msg.text[2]).toFixed(process.settings.coin.decimals); // tip tBTC directly
     }
   } else {
+    // wrong amount of argument, arugtment has to be 2 or 3
     msg.obj.reply('You used the wrong amount of arguments.');
     return;
   }
 
   //If the amount is all...
-  if (amount === 'all') {
+  if (msg.text[2] === 'all') {
     //Set the amount to the user's balance.
     amount = await process.core.users.getBalance(from);
   }
