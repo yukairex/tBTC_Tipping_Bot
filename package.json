@@ -10,7 +10,7 @@
         "url": "https://github.com/kayabaNerve/tip-bot.git"
     },
     "scripts": {
-        "start": "node index.js",
+        "start": "node main.js",
         "build": "docker build ."
     },
     "dependencies": {
